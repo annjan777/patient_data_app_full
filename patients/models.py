@@ -3,14 +3,81 @@ from django.contrib.auth import get_user_model
 import uuid
 
 class Patient(models.Model):
-    patient_id = models.CharField(max_length=64, unique=True)
-    name = models.CharField(max_length=200)
-    age = models.PositiveIntegerField(null=True, blank=True)
-    gender = models.CharField(max_length=32, blank=True)
-    clinical_notes = models.TextField(blank=True)
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+        ('', 'Prefer not to say'),
+    ]
+    
+    patient_id = models.CharField(
+        max_length=64,
+        unique=True,
+        help_text='Unique identifier for the patient',
+        verbose_name='Patient ID'
+    )
+    name = models.CharField(
+        max_length=200,
+        help_text='Full name of the patient'
+    )
+    date_of_birth = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Date of birth (YYYY-MM-DD)',
+        verbose_name='Date of Birth'
+    )
+    age = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Age in years',
+        verbose_name='Age'
+    )
+    gender = models.CharField(
+        max_length=1,
+        choices=GENDER_CHOICES,
+        blank=True,
+        help_text='Gender identity'
+    )
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Contact number with country code',
+        verbose_name='Phone Number'
+    )
+    email = models.EmailField(
+        max_length=254,
+        blank=True,
+        help_text='Primary email address'
+    )
+    address = models.TextField(
+        blank=True,
+        help_text='Full postal address'
+    )
+    clinical_notes = models.TextField(
+        blank=True,
+        help_text='Medical history and clinical observations',
+        verbose_name='Clinical Notes'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Patient'
+        verbose_name_plural = 'Patients'
 
     def __str__(self):
-        return f"{self.patient_id} - {self.name}"
+        return f"{self.name} ({self.patient_id})"
+        
+    def save(self, *args, **kwargs):
+        # Auto-calculate age from date_of_birth if provided
+        if self.date_of_birth and not self.age:
+            from datetime import date
+            today = date.today()
+            self.age = today.year - self.date_of_birth.year - (
+                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+            )
+        super().save(*args, **kwargs)
 
 class MeasurementSession(models.Model):
     session_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)

@@ -45,6 +45,25 @@ def patient_detail(request, pk):
     return render(request,'patients/patient_detail.html',{'patient':patient})
 
 @login_required
+def patient_update(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    if request.method == 'POST':
+        form = PatientForm(request.POST, instance=patient)
+        if form.is_valid():
+            form.save()
+            return redirect('patients:patient_detail', pk=patient.pk)
+    else:
+        form = PatientForm(instance=patient)
+    return render(request, 'patients/patient_form.html', {'form': form, 'patient': patient})
+
+@login_required
+@require_POST
+def patient_delete(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    patient.delete()
+    return redirect('patients:patient_list')
+
+@login_required
 def session_detail(request, session_id):
     session = get_object_or_404(MeasurementSession, session_id=session_id)
     spectra = session.spectra.all().order_by('wavelength')
