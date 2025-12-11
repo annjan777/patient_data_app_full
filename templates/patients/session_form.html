@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Session - {{ patient.name }}{% endblock %}
+
+{% block page_title %}
+  {% if form.instance.pk %}
+    Edit Session
+  {% else %}
+    New Measurement Session
+  {% endif %}
+  <small>for {{ patient.name }}</small>
+{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}">Patients</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'patients:patient_detail' patient.pk %}">{{ patient.name }}</a></li>
+  <li class="breadcrumb-item active">
+    {% if form.instance.pk %}
+      Edit Session {{ form.instance.session_id|truncatechars:8 }}
+    {% else %}
+      New Session
+    {% endif %}
+  </li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-primary">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-microscope"></i>
+          Session Details
+        </h3>
+      </div>
+      <form method="post" id="sessionForm" enctype="multipart/form-data">
+        <div class="card-body">
+          {% csrf_token %}
+          
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            <h5><i class="icon fas fa-exclamation-triangle"></i> Error!</h5>
+            {% for error in form.non_field_errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+          {% endif %}
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.session_id.id_for_label }}">
+                  {{ form.session_id.label }}
+                  {% if form.session_id.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  </div>
+                  {{ form.session_id }}
+                </div>
+                {% if form.session_id.errors %}
+                  <div class="text-danger">
+                    {% for error in form.session_id.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                <small class="form-text text-muted">{{ form.session_id.help_text }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.device_id.id_for_label }}">
+                  {{ form.device_id.label }}
+                  {% if form.device_id.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-microchip"></i></span>
+                  </div>
+                  {{ form.device_id }}
+                </div>
+                {% if form.device_id.errors %}
+                  <div class="text-danger">
+                    {% for error in form.device_id.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}">
+              {{ form.notes.label }}
+              {% if form.notes.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+              <div class="text-danger">
+                {% for error in form.notes.errors %}
+                  <small>{{ error }}</small>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.measurement_data.id_for_label }}">
+              {{ form.measurement_data.label }}
+              {% if form.measurement_data.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <div class="input-group">
+              <div class="custom-file">
+                {{ form.measurement_data }}
+                <label class="custom-file-label" for="{{ form.measurement_data.id_for_label }}">
+                  <i class="fas fa-upload"></i> Choose file
+                </label>
+              </div>
+            </div>
+            {% if form.measurement_data.errors %}
+              <div class="text-danger">
+                {% for error in form.measurement_data.errors %}
+                  <small>{{ error }}</small>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <small class="form-text text-muted">{{ form.measurement_data.help_text }}</small>
+          </div>
+          
+          <div class="form-check">
+            {{ form.completed }}
+            <label class="form-check-label" for="{{ form.completed.id_for_label }}">
+              Mark as completed
+            </label>
+            {% if form.completed.errors %}
+              <div class="text-danger">
+                {% for error in form.completed.errors %}
+                  <small>{{ error }}</small>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Session
+          </button>
+          <a href="{% url 'patients:patient_detail' patient.pk %}" class="btn btn-default">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <!-- Patient Info Card -->
+    <div class="card card-info">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-user-injured"></i>
+          Patient Information
+        </h3>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <div class="sparkpie" data-color="#17a2b8" data-height="100">
+            <div class="info-box">
+              <span class="info-box-icon bg-info">
+                <i class="fas fa-user"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">Patient</span>
+                <span class="info-box-number">{{ patient.name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <ul class="list-group list-group-unbordered">
+          <li class="list-group-item">
+            <b><i class="fas fa-id-card mr-1"></i> Patient ID</b>
+            <span class="float-right">{{ patient.patient_id|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b><i class="fas fa-venus-mars mr-1"></i> Gender</b>
+            <span class="float-right">{{ patient.get_gender_display|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b><i class="fas fa-birthday-cake mr-1"></i> Age</b>
+            <span class="float-right">
+              {% if patient.age %}{{ patient.age }} years{% else %}N/A{% endif %}
+            </span>
+          </li>
+          <li class="list-group-item">
+            <b><i class="fas fa-phone mr-1"></i> Phone</b>
+            <span class="float-right">{{ patient.phone_number|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b><i class="fas fa-envelope mr-1"></i> Email</b>
+            <span class="float-right">{{ patient.email|default:'N/A' }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Session Help Card -->
+    <div class="card card-warning">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-question-circle"></i>
+          Session Help
+        </h3>
+      </div>
+      <div class="card-body">
+        <h5>File Format</h5>
+        <p>Upload a CSV or Excel file with the following columns:</p>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-check-circle text-success mr-1"></i> <code>wavelength</code> - Numeric values in nm</li>
+          <li><i class="fas fa-check-circle text-success mr-1"></i> <code>intensity</code> - Numeric intensity values</li>
+          <li class="text-muted"><i class="fas fa-arrow-circle-right mr-1"></i> Optional: <code>timestamp</code> - Measurement timestamp</li>
+        </ul>
+        <hr>
+        <h5>Quick Tips</h5>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-info-circle text-info mr-1"></i> Ensure the device ID matches your spectrometer</li>
+          <li><i class="fas fa-info-circle text-info mr-1"></i> Add notes about any special conditions</li>
+          <li><i class="fas fa-info-circle text-info mr-1"></i> Mark as completed when all measurements are done</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Custom styles for the form */
+  .form-control.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+  }
+  
+  .form-control.is-valid {
+    border-color: #28a745;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+  }
+  
+  /* Custom file input styling */
+  .custom-file-label::after {
+    content: "Browse";
+  }
+  
+  /* Make form controls look better */
+  .form-control, .custom-select {
+    border-radius: 0.25rem;
+  }
+  
+  /* Style the notes textarea */
+  textarea.form-control {
+    min-height: 100px;
+  }
+  
+  /* Style the form group labels */
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  
+  /* Style the card headers */
+  .card-header {
+    border-bottom: 1px solid rgba(0,0,0,.125);
+  }
+  
+  /* Style the required field indicator */
+  .text-danger {
+    color: #dc3545 !important;
+  }
+  
+  /* Style the form actions */
+  .card-footer {
+    background-color: rgba(0,0,0,.03);
+    border-top: 1px solid rgba(0,0,0,.125);
+  }
+  
+  /* Info box styles */
+  .info-box {
+    min-height: 80px;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+  }
+  
+  .info-box-icon {
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    font-size: 1.5rem;
+  }
+  
+  .info-box-content {
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  }
+  
+  .info-box-text {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  
+  .info-box-number {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0.25rem 0 0;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .info-box {
+      min-height: 70px;
+    }
+    
+    .info-box-icon {
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
+      font-size: 1.25rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- bs-custom-file-input -->
+<script src="https://cdn.jsdelivr.net/npm/bs-custom-file-input/dist/bs-custom-file-input.min.js"></script>
+
+<script>
+  $(document).ready(function() {
+    // Initialize file input
+    bsCustomFileInput.init();
+    
+    // Auto-generate session ID if empty
+    $('#id_session_id').on('focus', function() {
+      if (!$(this).val()) {
+        // Generate a random 8-character alphanumeric ID
+        const randomId = Math.random().toString(36).substr(2, 8).toUpperCase();
+        $(this).val('SESS-' + randomId);
+      }
+    });
+    
+    // Auto-focus the first form field
+    $('form:first *:input[type!=hidden]:first').focus();
+    
+    // Form validation
+    (function() {
+      'use strict';
+      window.addEventListener('load', function() {
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.getElementsByClassName('needs-validation');
+        // Loop over them and prevent submission
+        var validation = Array.prototype.filter.call(forms, function(form) {
+          form.addEventListener('submit', function(event) {
+            if (form.checkValidity() === false) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+          }, false);
+        });
+      }, false);
+    })();
+  });
+</script>
+{% endblock %}

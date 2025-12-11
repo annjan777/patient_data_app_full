@@ -1,0 +1,562 @@
+{% extends 'base.html' %}
+
+{% block title %}Session {{ session.session_id }} - {{ session.patient.name }}{% endblock %}
+
+{% block page_title %}
+  Session: {{ session.session_id }}
+  <small>Measurement Details</small>
+{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}">Patients</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'patients:patient_detail' session.patient.pk %}">{{ session.patient.name }}</a></li>
+  <li class="breadcrumb-item active">Session {{ session.session_id|truncatechars:12 }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-4">
+    <!-- Session Info Card -->
+    <div class="card card-primary card-outline">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-info-circle"></i>
+          Session Information
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <div class="sparkpie" data-color="#00a65a" data-height="100">
+            <div class="info-box">
+              <span class="info-box-icon {% if session.completed %}bg-success{% else %}bg-warning{% endif %}">
+                <i class="fas fa-{% if session.completed %}check{% else %}hourglass{% endif %}"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">Status</span>
+                <span class="info-box-number">
+                  {% if session.completed %}
+                    <span class="badge bg-success">Completed</span>
+                  {% else %}
+                    <span class="badge bg-warning">In Progress</span>
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <ul class="list-group list-group-unbordered mb-3">
+          <li class="list-group-item">
+            <b><i class="fas fa-user mr-1"></i> Patient</b>
+            <a href="{% url 'patients:patient_detail' session.patient.pk %}" class="float-right">
+              {{ session.patient.name }}
+            </a>
+          </li>
+          <li class="list-group-item">
+            <b><i class="fas fa-id-card mr-1"></i> Patient ID</b>
+            <span class="float-right">{{ session.patient.patient_id|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b><i class="fas fa-microchip mr-1"></i> Device ID</b>
+            <span class="float-right">{{ session.device_id|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b><i class="far fa-calendar-plus mr-1"></i> Created</b>
+            <span class="float-right" title="{{ session.created_at|date:'DATETIME_FORMAT' }}">
+              {{ session.created_at|timesince }} ago
+            </span>
+          </li>
+          {% if session.completed %}
+          <li class="list-group-item">
+            <b><i class="far fa-calendar-check mr-1"></i> Completed</b>
+            <span class="float-right" title="{{ session.updated_at|date:'DATETIME_FORMAT' }}">
+              {{ session.updated_at|timesince }} ago
+            </span>
+          </li>
+          {% endif %}
+          <li class="list-group-item">
+            <b><i class="fas fa-database mr-1"></i> Data Points</b>
+            <span class="float-right">{{ session.spectra.count }}</span>
+          </li>
+        </ul>
+        
+        <div class="text-center mt-3">
+          <div class="btn-group">
+            <a href="{% url 'patients:export_csv' session.session_id %}" class="btn btn-outline-primary">
+              <i class="fas fa-file-csv"></i> CSV
+            </a>
+            <a href="{% url 'patients:export_xlsx' session.session_id %}" class="btn btn-outline-success">
+              <i class="fas fa-file-excel"></i> Excel
+            </a>
+            <button type="button" class="btn btn-outline-info" data-toggle="modal" data-target="#dataModal">
+              <i class="fas fa-table"></i> View Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Analysis Card -->
+    <div class="card card-info">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-bar"></i>
+          Analysis
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-6">
+            <div class="info-box bg-light">
+              <span class="info-box-icon"><i class="fas fa-wave-square"></i></span>
+              <div class="info-box-content">
+                <span class="info-box-text">Peak</span>
+                <span class="info-box-number" id="peakValue">-</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="info-box bg-light">
+              <span class="info-box-icon"><i class="fas fa-ruler-horizontal"></i></span>
+              <div class="info-box-content">
+                <span class="info-box-text">FWHM</span>
+                <span class="info-box-number" id="fwhmValue">-</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="form-group">
+              <label>Wavelength Range</label>
+              <div class="input-group
+                <div class="input-group-prepend">
+                  <span class="input-group-text">
+                    <i class="fas fa-arrows-alt-h"></i>
+                  </span>
+                </div>
+                <input type="number" id="minWavelength" class="form-control" placeholder="Min" value="{{ min_wavelength|default:'' }}">
+                <input type="number" id="maxWavelength" class="form-control" placeholder="Max" value="{{ max_wavelength|default:'' }}">
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary" type="button" id="applyRange">
+                    <i class="fas fa-sync-alt"></i> Update
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main Chart -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-line"></i>
+          Spectrum Analysis
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+          <div class="btn-group">
+            <button type="button" class="btn btn-tool dropdown-toggle" data-toggle="dropdown">
+              <i class="fas fa-download"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-right" role="menu">
+              <a href="#" class="dropdown-item" id="downloadPNG"><i class="fas fa-file-image"></i> Download as PNG</a>
+              <a href="#" class="dropdown-item" id="downloadCSV"><i class="fas fa-file-csv"></i> Export Data as CSV</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart">
+          <canvas id="spectrumChart" height="300" style="height: 300px;"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Data Table -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-table"></i>
+          Data Points
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped table-hover">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Wavelength (nm)</th>
+                <th>Intensity</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for point in session.spectra.all|slice:":10" %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ point.wavelength|floatformat:2 }}</td>
+                <td>{{ point.intensity|floatformat:4 }}</td>
+                <td>{{ point.timestamp|default:"-" }}</td>
+              </tr>
+              {% endfor %}
+              {% if session.spectra.count > 10 %}
+              <tr>
+                <td colspan="4" class="text-center">
+                  <a href="#" data-toggle="modal" data-target="#dataModal">
+                    View all {{ session.spectra.count }} data points
+                  </a>
+                </td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data Modal -->
+<div class="modal fade" id="dataModal" tabindex="-1" role="dialog" aria-labelledby="dataModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dataModalLabel">Session Data - {{ session.session_id }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead class="thead-light">
+              <tr>
+                <th>#</th>
+                <th>Wavelength (nm)</th>
+                <th>Intensity</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for point in session.spectra.all %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ point.wavelength|floatformat:2 }}</td>
+                <td>{{ point.intensity|floatformat:4 }}</td>
+                <td>{{ point.timestamp|default:"-" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <a href="{% url 'patients:export_csv' session.session_id %}" class="btn btn-primary">
+          <i class="fas fa-download"></i> Export as CSV
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+<style>
+  .info-box {
+    min-height: 80px;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+  }
+  
+  .info-box-icon {
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    font-size: 1.5rem;
+  }
+  
+  .info-box-content {
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  }
+  
+  .info-box-text {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  
+  .info-box-number {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0.25rem 0 0;
+  }
+  
+  .chart {
+    position: relative;
+    min-height: 300px;
+  }
+  
+  /* Custom scrollbar for data table */
+  .table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  
+  .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  
+  /* Modal styles */
+  .modal-xl {
+    max-width: 95%;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .chart {
+      min-height: 250px;
+    }
+    
+    .info-box {
+      min-height: 70px;
+    }
+    
+    .info-box-icon {
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
+      font-size: 1.25rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+<!-- Chart.js plugins -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
+
+<script>
+  $(document).ready(function() {
+    // Initialize DataTable
+    $('.table').DataTable({
+      "paging": true,
+      "lengthChange": true,
+      "searching": true,
+      "ordering": true,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+      "pageLength": 10,
+      "order": [[1, "asc"]]
+    });
+    
+    // Get the spectrum data from the template
+    const spectrumData = JSON.parse('{{ data|escapejs }}');
+    const labels = spectrumData.map(function(d) { 
+      return parseFloat(d.wavelength).toFixed(2);
+    });
+    const values = spectrumData.map(function(d) {
+      return parseFloat(d.intensity);
+    });
+    
+    // Find peak values for analysis
+    const maxIntensity = Math.max(...values);
+    const maxIndex = values.indexOf(maxIntensity);
+    const peakWavelength = parseFloat(labels[maxIndex]);
+    
+    // Calculate FWHM (simplified example)
+    let fwhm = 'N/A';
+    if (values.length > 1) {
+      const halfMax = maxIntensity / 2;
+      let leftIdx = maxIndex;
+      let rightIdx = maxIndex;
+      
+      // Find left edge
+      while (leftIdx > 0 && values[leftIdx] > halfMax) {
+        leftIdx--;
+      }
+      
+      // Find right edge
+      while (rightIdx < values.length - 1 && values[rightIdx] > halfMax) {
+        rightIdx++;
+      }
+      
+      if (leftIdx < rightIdx) {
+        fwhm = (parseFloat(labels[rightIdx]) - parseFloat(labels[leftIdx])).toFixed(2) + ' nm';
+      }
+    }
+    
+    // Update analysis values
+    $('#peakValue').text(peakWavelength.toFixed(2) + ' nm');
+    $('#fwhmValue').text(fwhm);
+    
+    // Initialize the chart
+    const ctx = document.getElementById('spectrumChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Intensity',
+          data: values,
+          borderColor: '#3c8dbc',
+          backgroundColor: 'rgba(60, 141, 188, 0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: function(context) {
+                return `Wavelength: ${context.label} nm, Intensity: ${context.raw}`;
+              }
+            }
+          },
+          zoom: {
+            zoom: {
+              wheel: {
+                enabled: true,
+              },
+              pinch: {
+                enabled: true
+              },
+              mode: 'x',
+            },
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            limits: {
+              x: { min: 'original', max: 'original' },
+              y: { min: 'original', max: 'original' }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Wavelength (nm)'
+            },
+            grid: {
+              display: true
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Intensity (a.u.)'
+            },
+            grid: {
+              display: true
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              yMin: 0,
+              yMax: 0,
+              borderColor: 'rgb(255, 99, 132)',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              label: {
+                content: 'Peak at ' + peakWavelength.toFixed(2) + ' nm',
+                enabled: true,
+                position: 'top'
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Update chart when range is applied
+    $('#applyRange').on('click', function() {
+      const min = parseFloat($('#minWavelength').val());
+      const max = parseFloat($('#maxWavelength').val());
+      
+      if (!isNaN(min) && !isNaN(max) && min < max) {
+        chart.options.scales.x.min = min;
+        chart.options.scales.x.max = max;
+        chart.update();
+      } else {
+        alert('Please enter valid min and max wavelength values.');
+      }
+    });
+    
+    // Download chart as PNG
+    $('#downloadPNG').on('click', function(e) {
+      e.preventDefault();
+      const link = document.createElement('a');
+      link.download = 'spectrum_' + '{{ session.session_id }}' + '.png';
+      link.href = document.getElementById('spectrumChart').toDataURL('image/png');
+      link.click();
+    });
+    
+    // Download data as CSV
+    $('#downloadCSV').on('click', function(e) {
+      e.preventDefault();
+      window.location.href = '{% url "patients:export_csv" session.session_id %}';
+    });
+    
+    // Reset zoom button
+    $('.reset-zoom').on('click', function() {
+      chart.resetZoom();
+    });
+  });
+</script>
+{% endblock %}

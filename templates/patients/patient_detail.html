@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ patient.name }} - Patient Details{% endblock %}
+
+{% block page_title %}
+  {{ patient.name }}
+  <a href="{% url 'patients:patient_update' patient.pk %}" class="btn btn-primary btn-sm">
+    <i class="fas fa-edit"></i> Edit
+  </a>
+  <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteModal">
+    <i class="fas fa-trash"></i> Delete
+  </button>
+{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}">Patients</a></li>
+  <li class="breadcrumb-item active">{{ patient.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Patient Information Card -->
+  <div class="col-md-4">
+    <div class="card card-primary card-outline">
+      <div class="card-body box-profile">
+        <div class="text-center
+          {% if patient.gender == 'M' %}
+            bg-primary
+          {% elif patient.gender == 'F' %}
+            bg-pink
+          {% else %}
+            bg-secondary
+          {% endif %} 
+          rounded-circle p-3 mb-3" style="width: 100px; height: 100px; margin: 0 auto;">
+          <i class="fas fa-user fa-4x text-white"></i>
+        </div>
+
+        <h3 class="profile-username text-center">{{ patient.name }}</h3>
+        <p class="text-muted text-center">Patient ID: {{ patient.patient_id|default:'N/A' }}</p>
+
+        <ul class="list-group list-group-unbordered mb-3">
+          <li class="list-group-item">
+            <b>Age</b> <span class="float-right">{{ patient.age|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b>Gender</b> <span class="float-right">{{ patient.get_gender_display|default:'N/A' }}</span>
+          </li>
+          <li class="list-group-item">
+            <b>Total Sessions</b> <span class="float-right">{{ patient.sessions.count }}</span>
+          </li>
+          <li class="list-group-item">
+            <b>Last Visit</b> 
+            <span class="float-right">
+              {% if patient.updated_at %}
+                {{ patient.updated_at|date:"M d, Y" }}
+              {% else %}
+                No visits yet
+              {% endif %}
+            </span>
+          </li>
+        </ul>
+
+        <form method="post" class="text-center">
+          {% csrf_token %}
+          <button name="start_measurement" class="btn btn-success btn-lg">
+            <i class="fas fa-play-circle"></i> Start New Measurement
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sessions Card -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Measurement Sessions</h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        {% if patient.sessions.all %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Session ID</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for session in patient.sessions.all %}
+              <tr>
+                <td>{{ session.session_id|truncatechars:15 }}</td>
+                <td>{{ session.created_at|date:"M d, Y H:i" }}</td>
+                <td>
+                  {% if session.completed %}
+                    <span class="badge bg-success">Completed</span>
+                  {% else %}
+                    <span class="badge bg-warning">In Progress</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'patients:session_detail' session.session_id %}" class="btn btn-info btn-sm" title="View Details">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <a href="{% url 'patients:export_csv' session.session_id %}" class="btn btn-secondary btn-sm" title="Download CSV">
+                    <i class="fas fa-file-csv"></i>
+                  </a>
+                  <a href="{% url 'patients:export_xlsx' session.session_id %}" class="btn btn-success btn-sm" title="Download Excel">
+                    <i class="fas fa-file-excel"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-3">
+          <div class="alert alert-info">
+            <h5><i class="icon fas fa-info"></i> No sessions found!</h5>
+            This patient doesn't have any measurement sessions yet. Click the "Start New Measurement" button to begin.
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% if is_paginated %}
+      <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+          {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1">&laquo; First</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+          {% endif %}
+          
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+          
+          {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger">
+        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete patient <strong>{{ patient.name }}</strong>?</p>
+        <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone and all associated data will be permanently deleted.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'patients:patient_delete' patient.pk %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash"></i> Delete Permanently
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+      $(".alert").fadeOut(1000, function(){
+        $(this).remove();
+      });
+    }, 5000);
+  });
+</script>
+{% endblock %}

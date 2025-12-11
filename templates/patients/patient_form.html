@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Patient{% endblock %}
+
+{% block page_title %}
+  {% if form.instance.pk %}
+    Edit Patient
+  {% else %}
+    Add New Patient
+  {% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}">Patients</a></li>
+  <li class="breadcrumb-item active">
+    {% if form.instance.pk %}
+      Edit {{ form.instance.name }}
+    {% else %}
+      New Patient
+    {% endif %}
+  </li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-primary">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-user-edit"></i>
+          Patient Information
+        </h3>
+      </div>
+      <form method="post" id="patientForm" novalidate>
+        <div class="card-body">
+          {% csrf_token %}
+          
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            <h5><i class="icon fas fa-exclamation-triangle"></i> Error!</h5>
+            {% for error in form.non_field_errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+          {% endif %}
+          
+          <div class="form-group">
+            <label for="{{ form.name.id_for_label }}">
+              {{ form.name.label }}
+              {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <div class="text-danger">
+                {% for error in form.name.errors %}
+                  <small>{{ error }}</small>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <small class="form-text text-muted">{{ form.name.help_text }}</small>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.patient_id.id_for_label }}">
+                  {{ form.patient_id.label }}
+                  {% if form.patient_id.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {{ form.patient_id }}
+                {% if form.patient_id.errors %}
+                  <div class="text-danger">
+                    {% for error in form.patient_id.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                <small class="form-text text-muted">{{ form.patient_id.help_text }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.gender.id_for_label }}">
+                  {{ form.gender.label }}
+                  {% if form.gender.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {{ form.gender }}
+                {% if form.gender.errors %}
+                  <div class="text-danger">
+                    {% for error in form.gender.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.age.id_for_label }}">
+                  {{ form.age.label }}
+                  {% if form.age.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {{ form.age }}
+                {% if form.age.errors %}
+                  <div class="text-danger">
+                    {% for error in form.age.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.date_of_birth.id_for_label }}">
+                  {{ form.date_of_birth.label }}
+                  {% if form.date_of_birth.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                <div class="input-group date" id="date_of_birth" data-target-input="nearest">
+                  {{ form.date_of_birth }}
+                  <div class="input-group-append" data-target="#date_of_birth" data-toggle="datetimepicker">
+                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                  </div>
+                </div>
+                {% if form.date_of_birth.errors %}
+                  <div class="text-danger">
+                    {% for error in form.date_of_birth.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.address.id_for_label }}">
+              {{ form.address.label }}
+              {% if form.address.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.address }}
+            {% if form.address.errors %}
+              <div class="text-danger">
+                {% for error in form.address.errors %}
+                  <small>{{ error }}</small>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.phone_number.id_for_label }}">
+                  {{ form.phone_number.label }}
+                  {% if form.phone_number.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                  </div>
+                  {{ form.phone_number }}
+                </div>
+                {% if form.phone_number.errors %}
+                  <div class="text-danger">
+                    {% for error in form.phone_number.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">
+                  {{ form.email.label }}
+                  {% if form.email.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                  </div>
+                  {{ form.email }}
+                </div>
+                {% if form.email.errors %}
+                  <div class="text-danger">
+                    {% for error in form.email.errors %}
+                      <small>{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}">
+              {{ form.notes.label }}
+              {% if form.notes.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+              <div class="text-danger">
+                {% for error in form.notes.errors %}
+                  <small>{{ error }}</small>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+          <a href="{% if form.instance.pk %}{% url 'patients:patient_detail' form.instance.pk %}{% else %}{% url 'patients:patient_list' %}{% endif %}" class="btn btn-default">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <!-- Additional Information Card -->
+    <div class="card card-info">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-info-circle"></i>
+          Form Instructions
+        </h3>
+      </div>
+      <div class="card-body">
+        <p>Please fill out all required fields marked with a red asterisk (<span class="text-danger">*</span>).</p>
+        <p>Ensure that the patient's contact information is accurate and up-to-date.</p>
+        <hr>
+        <h5>Quick Tips:</h5>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-check-circle text-success mr-2"></i> Double-check the patient ID for accuracy</li>
+          <li><i class="fas fa-check-circle text-success mr-2"></i> Include any relevant medical history in the notes</li>
+          <li><i class="fas fa-check-circle text-success mr-2"></i> Verify contact details before saving</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Tempusdominus Bootstrap 4 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/css/tempusdominus-bootstrap-4.min.css" />
+<style>
+  /* Custom styles for the form */
+  .form-control.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+  }
+  
+  .form-control.is-valid {
+    border-color: #28a745;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+  }
+  
+  /* Make form controls look better */
+  .form-control, .custom-select {
+    border-radius: 0.25rem;
+  }
+  
+  /* Style the notes textarea */
+  textarea.form-control {
+    min-height: 100px;
+  }
+  
+  /* Style the form group labels */
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  
+  /* Style the card headers */
+  .card-header {
+    border-bottom: 1px solid rgba(0,0,0,.125);
+  }
+  
+  /* Style the form instructions card */
+  .card-info {
+    border-top: 3px solid #17a2b8;
+  }
+  
+  /* Style the required field indicator */
+  .text-danger {
+    color: #dc3545 !important;
+  }
+  
+  /* Style the form actions */
+  .card-footer {
+    background-color: rgba(0,0,0,.03);
+    border-top: 1px solid rgba(0,0,0,.125);
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- InputMask -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+<!-- Tempusdominus Bootstrap 4 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js"></script>
+<!-- bs-custom-file-input -->
+<script src="https://cdn.jsdelivr.net/npm/bs-custom-file-input/dist/bs-custom-file-input.min.js"></script>
+
+<script>
+  $(document).ready(function() {
+    // Initialize date picker
+    $('.datepicker').datetimepicker({
+      format: 'YYYY-MM-DD',
+      useCurrent: false,
+      icons: {
+        time: 'far fa-clock',
+        date: 'far fa-calendar',
+        up: 'fas fa-arrow-up',
+        down: 'fas fa-arrow-down',
+        previous: 'fas fa-chevron-left',
+        next: 'fas fa-chevron-right',
+        today: 'far fa-calendar-check',
+        clear: 'far fa-trash-alt',
+        close: 'fas fa-times'
+      }
+    });
+    
+    // Initialize phone number input mask
+    $('[data-mask]').inputmask();
+    
+    // Enable client-side validation
+    (function() {
+      'use strict';
+      window.addEventListener('load', function() {
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.getElementsByClassName('needs-validation');
+        // Loop over them and prevent submission
+        var validation = Array.prototype.filter.call(forms, function(form) {
+          form.addEventListener('submit', function(event) {
+            if (form.checkValidity() === false) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+          }, false);
+        });
+      }, false);
+    })();
+    
+    // Auto-calculate age if date of birth changes
+    $('#id_date_of_birth').on('change', function() {
+      var dob = new Date($(this).val());
+      if (!isNaN(dob.getTime())) {
+        var today = new Date();
+        var age = today.getFullYear() - dob.getFullYear();
+        var m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+        $('#id_age').val(age);
+      }
+    });
+  });
+</script>
+{% endblock %}

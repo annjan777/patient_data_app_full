@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Patient Data Management{% endblock %}
+
+{% block page_title %}
+  Dashboard
+  <small>Overview of your patient data</small>
+{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Info boxes -->
+  <div class="row">
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="info-box">
+        <span class="info-box-icon bg-info elevation-1"><i class="fas fa-users"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">Total Patients</span>
+          <span class="info-box-number">
+            {{ total_patients }}
+            <small>registered</small>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="info-box mb-3">
+        <span class="info-box-icon bg-success elevation-1"><i class="fas fa-heartbeat"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">Total Sessions</span>
+          <span class="info-box-number">{{ total_sessions }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="info-box mb-3">
+        <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-check-circle"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">Completed</span>
+          <span class="info-box-number">{{ completed_sessions }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="info-box mb-3">
+        <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-chart-line"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">This Month</span>
+          <span class="info-box-number">{{ monthly_sessions }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Left col -->
+    <div class="col-md-8">
+      <!-- TABLE: LATEST SESSIONS -->
+      <div class="card">
+        <div class="card-header border-transparent">
+          <h3 class="card-title">Recent Sessions</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+              <i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table m-0">
+              <thead>
+                <tr>
+                  <th>Session ID</th>
+                  <th>Patient</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for session in sessions %}
+                <tr>
+                  <td>{{ session.session_id|truncatechars:10 }}</td>
+                  <td>
+                    <a href="{% url 'patients:patient_detail' session.patient.pk %}">
+                      {{ session.patient.name }}
+                    </a>
+                  </td>
+                  <td>
+                    {% if session.completed %}
+                      <span class="badge bg-success">Completed</span>
+                    {% else %}
+                      <span class="badge bg-warning">In Progress</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ session.created_at|date:"M d, Y H:i" }}</td>
+                  <td>
+                    <a href="{% url 'patients:session_detail' session.session_id %}" class="btn btn-info btn-sm" title="View">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center">No sessions found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer clearfix">
+          <a href="{% url 'patients:patient_list' %}" class="btn btn-sm btn-secondary float-right">View All Patients</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right col -->
+    <div class="col-md-4">
+      <!-- RECENT PATIENTS -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Recently Added Patients</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+              <i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <ul class="products-list product-list-in-card pl-2 pr-2">
+            {% for patient in patients %}
+            <li class="item">
+              <div class="product-img">
+                <div class="img-circle img-bordered-sm {% if patient.gender == 'M' %}bg-primary{% else %}bg-pink{% endif %}" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-user text-white"></i>
+                </div>
+              </div>
+              <div class="product-info">
+                <a href="{% url 'patients:patient_detail' patient.pk %}" class="product-title">
+                  {{ patient.name }}
+                  <span class="badge {% if patient.gender == 'M' %}bg-primary{% else %}bg-pink{% endif %} float-right">
+                    {{ patient.get_gender_display }}
+                  </span>
+                </a>
+                <span class="product-description">
+                  ID: {{ patient.patient_id|default:'-' }} | Age: {{ patient.age|default:'-' }}
+                </span>
+              </div>
+            </li>
+            {% empty %}
+            <li class="item">
+              <div class="product-info">
+                <span class="product-description">No patients found.</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer text-center">
+          <a href="{% url 'patients:patient_create' %}" class="btn btn-sm btn-primary">
+            <i class="fas fa-plus"></i> Add New Patient
+          </a>
+        </div>
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="card-body">
+          <a href="{% url 'patients:patient_create' %}" class="btn btn-primary btn-block mb-2">
+            <i class="fas fa-user-plus"></i> New Patient
+          </a>
+          <button class="btn btn-success btn-block mb-2" data-toggle="modal" data-target="#startSessionModal">
+            <i class="fas fa-play-circle"></i> Start New Session
+          </button>
+          <a href="/admin/" class="btn btn-info btn-block mb-2">
+            <i class="fas fa-cog"></i> Admin Panel
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Start Session Modal -->
+<div class="modal fade" id="startSessionModal" tabindex="-1" role="dialog" aria-labelledby="startSessionModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="startSessionModalLabel">Start New Session</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Please select a patient to start a new measurement session:</p>
+        {% if patients %}
+        <ul class="list-group">
+          {% for patient in patients %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ patient.name }}
+            <form method="post" action="{% url 'patients:patient_detail' patient.pk %}" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" name="start_measurement" class="btn btn-sm btn-success">
+                <i class="fas fa-play"></i> Start
+              </button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="alert alert-warning">No patients found. Please add a patient first.</div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <a href="{% url 'patients:patient_create' %}?next={% url 'patients:dashboard' %}" class="btn btn-primary">
+          <i class="fas fa-user-plus"></i> Add New Patient
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  $(document).ready(function() {
+    // Enable tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+      $(".alert").fadeOut(1000, function(){
+        $(this).remove();
+      });
+    }, 5000);
+    
+    // Initialize any charts here if needed
+    // Example:
+    /*
+    var ctx = document.getElementById('patientChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+          label: 'New Patients',
+          data: [12, 19, 3, 5, 2, 3],
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+    */
+  });
+</script>
+{% endblock %}
