@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { 
+            background-color: #4CAF50; 
+            color: white; 
+            padding: 15px; 
+            text-align: center; 
+            border-radius: 5px 5px 0 0;
+        }
+        .content { 
+            padding: 20px; 
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .patient-id {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 5px solid #4CAF50;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .footer { 
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>New Patient Registration Confirmation</h2>
+        </div>
+        <div class="content">
+            <p>Hello {{ patient.name }},</p>
+            
+            <p>Thank you for registering with our healthcare system. Below are your patient details:</p>
+            
+            <div class="patient-id">
+                Your Patient ID: <strong>{{ patient.patient_id }}</strong>
+            </div>
+            
+            <p><strong>Registration Details:</strong></p>
+            <ul>
+                <li><strong>Name:</strong> {{ patient.name }}</li>
+                {% if patient.date_of_birth %}<li><strong>Date of Birth:</strong> {{ patient.date_of_birth|date:"F j, Y" }}</li>{% endif %}
+                {% if patient.gender %}<li><strong>Gender:</strong> {{ patient.get_gender_display }}</li>{% endif %}
+                {% if patient.phone_number %}<li><strong>Phone:</strong> {{ patient.phone_number }}</li>{% endif %}
+                <li><strong>Email:</strong> {{ patient.email }}</li>
+                {% if patient.special_notes %}<li><strong>Special Notes:</strong> {{ patient.special_notes }}</li>{% endif %}
+            </ul>
+            
+            <p>Please keep your Patient ID safe as you will need it for future reference when accessing our services.</p>
+            
+            <p>If you have any questions or need to update your information, please don't hesitate to contact us.</p>
+            
+            <p>Best regards,<br>Your Healthcare Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>© {% now "Y" %} Your Healthcare Provider. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

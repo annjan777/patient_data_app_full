@@ -2,6 +2,23 @@ from django.db import models
 from django.contrib.auth import get_user_model
 import uuid
 
+def generate_patient_id():
+    """Generate a new patient ID in the format PID000001"""
+    from django.db.models import Max
+    from django.db.models.functions import Substr, Cast
+    from django.db.models import IntegerField
+    
+    # Get the highest existing PID number
+    max_pid = Patient.objects.annotate(
+        pid_num=Cast(Substr('patient_id', 4), output_field=IntegerField())
+    ).aggregate(max_pid=Max('pid_num'))['max_pid']
+    
+    # If no patients exist yet, start from 1, otherwise increment the max
+    new_number = 1 if max_pid is None else max_pid + 1
+    
+    # Format as PID with leading zeros
+    return f"PID{new_number:06d}"
+
 class Patient(models.Model):
     GENDER_CHOICES = [
         ('M', 'Male'),
@@ -11,10 +28,12 @@ class Patient(models.Model):
     ]
     
     patient_id = models.CharField(
-        max_length=64,
+        max_length=10,
         unique=True,
         help_text='Unique identifier for the patient',
-        verbose_name='Patient ID'
+        verbose_name='Patient ID',
+        default=generate_patient_id,
+        editable=False
     )
     name = models.CharField(
         max_length=200,

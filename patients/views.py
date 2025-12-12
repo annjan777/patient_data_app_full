@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from .models import Patient, MeasurementSession, SpectralPoint
 from .forms import PatientForm
 from django.contrib.auth.decorators import login_required
@@ -21,16 +22,72 @@ def patient_list(request):
     patients = Patient.objects.filter(name__icontains=q) if q else Patient.objects.all()
     return render(request,'patients/patient_list.html',{'patients':patients,'q':q})
 
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 @login_required
 def patient_create(request):
-    if request.method=='POST':
+    if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
-            form.save()
+            patient = form.save()
+            
+            # Prepare success message with PID
+            success_message = f"Patient created successfully! Patient ID: {patient.patient_id}"
+            messages.success(request, success_message)
+            
+            # Send email if email is provided
+            if patient.email:
+                try:
+                    subject = f"New Patient Registration: {patient.name}"
+                    html_message = render_to_string('patients/email/patient_created.html', {
+                        'patient': patient,
+                        'created_by': request.user.get_full_name() or request.user.username,
+                    })
+                    plain_message = strip_tags(html_message)
+                    
+                    try:
+                        send_mail(
+                            subject=subject,
+                            message=plain_message,
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=[patient.email],
+                            html_message=html_message,
+                            fail_silently=False,
+                        )
+                        messages.info(request, f"Patient ID and details have been sent to {patient.email}")
+                    except Exception as e:
+                        # Log the error but don't show it to the user
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Failed to send email to {patient.email}: {str(e)}")
+                        # Don't show email error to user as it's not critical
+                        pass
+                except Exception as e:
+                    # Log any other email-related errors
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error preparing email: {str(e)}")
+            
+            # Return JSON response for AJAX or redirect for normal form submission
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'patient_id': patient.patient_id,
+                    'redirect': reverse('patients:patient_list')
+                })
             return redirect('patients:patient_list')
+        elif request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
     else:
         form = PatientForm()
-    return render(request,'patients/patient_form.html',{'form':form})
+    
+    return render(request, 'patients/patient_form.html', {'form': form})
 
 @login_required
 def patient_detail(request, pk):

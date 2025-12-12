@@ -13,6 +13,27 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
   <!-- Custom styles -->
   <style>
+    body.login-page {
+      background: #f4f6f9;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-box {
+      width: 360px;
+    }
+    .login-logo {
+      font-size: 2.1rem;
+      font-weight: 300;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .login-card-body {
+      border-radius: 8px;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      border-top: 3px solid #007bff;
+    }
     .main-header { box-shadow: 0 2px 4px rgba(0,0,0,.1); }
     .sidebar { min-height: calc(100vh - 3.5rem); position: sticky; top: 0; }
     .content-header { padding: 15px 15px 0; }
@@ -22,184 +43,348 @@
   </style>
   {% block extra_css %}{% endblock %}
 </head>
-<body class="hold-transition sidebar-mini">
-<div class="wrapper">
-  <!-- Navbar -->
-  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-    <!-- Left navbar links -->
-    <ul class="navbar-nav">
-      <li class="nav-item">
-        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
-      </li>
-      <li class="nav-item d-none d-sm-inline-block">
-        <a href="{% url 'patients:dashboard' %}" class="nav-link">Home</a>
-      </li>
-    </ul>
+<body class="{% block body_class %}{% endblock %}">
+{% block body %}
+  {% if not request.path == '/accounts/login/' and not request.path == '/accounts/logout/' %}
+  <div class="wrapper">
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+      <!-- Left navbar links -->
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+        </li>
+        <li class="nav-item d-none d-sm-inline-block">
+          <a href="{% url 'patients:dashboard' %}" class="nav-link">Home</a>
+        </li>
+      </ul>
 
-    <!-- Right navbar links -->
-    <ul class="navbar-nav ml-auto">
-      {% if user.is_authenticated %}
-        <li class="nav-item dropdown">
-          <a class="nav-link" data-toggle="dropdown" href="#">
-            <i class="far fa-user-circle"></i> {{ user.username }}
-          </a>
-          <div class="dropdown-menu dropdown-menu-right">
-            <a href="#" class="dropdown-item">
-              <i class="fas fa-user mr-2"></i> Profile
+      <!-- Right navbar links -->
+      <ul class="navbar-nav ml-auto">
+        {% if user.is_authenticated %}
+          <li class="nav-item dropdown">
+            <a class="nav-link" data-toggle="dropdown" href="#">
+              <i class="far fa-user-circle"></i> {{ user.username }}
             </a>
-            <div class="dropdown-divider"></div>
-            <a href="{% url 'logout' %}" class="dropdown-item">
-              <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            <div class="dropdown-menu dropdown-menu-right">
+              <a href="#" class="dropdown-item">
+                <i class="fas fa-user mr-2"></i> Profile
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="{% url 'logout' %}" class="dropdown-item">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+              </a>
+            </div>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'login' %}">
+              <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+          </li>
+        {% endif %}
+        <li class="nav-item">
+          <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+            <i class="fas fa-expand-arrows-alt"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <!-- /.navbar -->
+
+    <!-- Main Sidebar Container -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+      <!-- Brand Logo -->
+      <a href="{% url 'patients:dashboard' %}" class="brand-link">
+        <img src="https://adminlte.io/themes/v3/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+        <span class="brand-text font-weight-light">Patient Data</span>
+      </a>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Sidebar user panel (optional) -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+          <div class="image">
+            <img src="https://adminlte.io/themes/v3/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+          </div>
+          <div class="info">
+            <a href="#" class="d-block">
+              {% if user.is_authenticated %}
+                {{ user.username }}
+              {% else %}
+                Guest
+              {% endif %}
             </a>
           </div>
-        </li>
-      {% else %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'login' %}">
-            <i class="fas fa-sign-in-alt"></i> Login
-          </a>
-        </li>
-      {% endif %}
-      <li class="nav-item">
-        <a class="nav-link" data-widget="fullscreen" href="#" role="button">
-          <i class="fas fa-expand-arrows-alt"></i>
-        </a>
-      </li>
-    </ul>
-  </nav>
-  <!-- /.navbar -->
-
-  <!-- Main Sidebar Container -->
-  <aside class="main-sidebar sidebar-dark-primary elevation-4">
-    <!-- Brand Logo -->
-    <a href="{% url 'patients:dashboard' %}" class="brand-link">
-      <img src="https://adminlte.io/themes/v3/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
-      <span class="brand-text font-weight-light">Patient Data</span>
-    </a>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Sidebar user panel (optional) -->
-      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-        <div class="image">
-          <img src="https://adminlte.io/themes/v3/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
         </div>
-        <div class="info">
-          <a href="#" class="d-block">
-            {% if user.is_authenticated %}
-              {{ user.username }}
-            {% else %}
-              Guest
+
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="{% url 'patients:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="nav-icon fas fa-tachometer-alt"></i>
+                <p>Dashboard</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'patients:patient_list' %}" class="nav-link {% if 'patient' in request.resolver_match.url_name %}{% if 'session' not in request.resolver_match.url_name %}active{% endif %}{% endif %}">
+                <i class="nav-icon fas fa-users"></i>
+                <p>Patients</p>
+              </a>
+            </li>
+            {% if user.is_staff %}
+            <li class="nav-item">
+              <a href="/admin/" class="nav-link" target="_blank">
+                <i class="nav-icon fas fa-cog"></i>
+                <p>Admin</p>
+              </a>
+            </li>
             {% endif %}
-          </a>
+          </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+      <!-- /.sidebar -->
+    </aside>
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+      <!-- Content Header (Page header) -->
+      <div class="content-header">
+        <div class="container-fluid">
+          <div class="row mb-2">
+            <div class="col-sm-6">
+              <h1 class="m-0">{% block page_title %}{% endblock %}</h1>
+            </div><!-- /.col -->
+            <div class="col-sm-6">
+              <ol class="breadcrumb float-sm-right">
+                <li class="breadcrumb-item"><a href="{% url 'patients:dashboard' %}">Home</a></li>
+                {% block breadcrumb %}{% endblock %}
+              </ol>
+            </div><!-- /.col -->
+          </div><!-- /.row -->
+        </div><!-- /.container-fluid -->
+      </div>
+      <!-- /.content-header -->
+
+      <!-- Main content -->
+      <section class="content">
+        <div class="container-fluid">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+          
+          {% block content %}
+          {% endblock %}
+        </div><!-- /.container-fluid -->
+      </section>
+      <!-- /.content -->
+    </div>
+    <!-- /.content-wrapper -->
+
+    <!-- Main Footer -->
+    <footer class="main-footer">
+      <div class="float-right d-none d-sm-block">
+        <b>Version</b> 1.0.0
+      </div>
+      <strong>Copyright &copy; {% now "Y" %} Patient Data Management System.</strong> All rights reserved.
+    </footer>
+  </div>
+  <!-- ./wrapper -->
+  {% endif %}
+  {% endblock %}
+
+  <!-- REQUIRED SCRIPTS -->
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap 4 -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- AdminLTE App -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/js/adminlte.min.js"></script>
+  <!-- Custom scripts -->
+  <script>
+    $(function () {
+      // Enable tooltips
+      $('[data-toggle="tooltip"]').tooltip()
+      
+      // Enable popovers
+      $('[data-toggle="popover"]').popover()
+
+      // Auto-hide alerts after 5 seconds
+      setTimeout(function() {
+        $('.alert').fadeOut('slow');
+      }, 5000);
+    });
+
+    // Handle AJAX form submissions
+    $(document).on('submit', 'form[data-ajax="true"]', function(e) {
+      e.preventDefault();
+      const $form = $(this);
+      const $submitBtn = $form.find('button[type="submit"]');
+      const originalText = $submitBtn.html();
+      
+      $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+      
+      $.ajax({
+        url: $form.attr('action'),
+        type: 'POST',
+        data: $form.serialize(),
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+          if (response.success) {
+            // Show success modal with patient ID and redirect
+            showSuccessModal(
+              `Patient created successfully!<br><strong>Patient ID: ${response.patient_id}</strong>`,
+              response.redirect
+            );
+          }
+        },
+        error: function(xhr) {
+          // Clear previous errors
+          $('.is-invalid').removeClass('is-invalid');
+          $('.invalid-feedback').remove();
+          
+          try {
+            let errorData;
+            try {
+              errorData = xhr.responseJSON || JSON.parse(xhr.responseText);
+            } catch (e) {
+              errorData = { message: xhr.responseText || 'An unknown error occurred' };
+            }
+            
+            if (xhr.status === 400 && errorData) {
+              // Handle form validation errors
+              if (errorData.errors) {
+                var errors = errorData.errors;
+                
+                // Display form-wide errors
+                if (errors.__all__) {
+                  $('#form-errors').show().find('#error-list').html(
+                    errors.__all__.map(error => `<li>${error}</li>`).join('')
+                  );
+                } else {
+                  $('#form-errors').hide();
+                }
+                
+                // Display field-specific errors
+                Object.entries(errors).forEach(([field, messages]) => {
+                  if (field !== '__all__') {
+                    const $field = $(`#id_${field}`);
+                    if ($field.length) {
+                      $field.addClass('is-invalid');
+                      const errorHtml = `<div class="invalid-feedback">${Array.isArray(messages) ? messages.join(' ') : messages}</div>`;
+                      $field.after(errorHtml);
+                    } else {
+                      // If field doesn't exist, show as form error
+                      $('#form-errors').show().find('#error-list')
+                        .append(`<li>${field}: ${Array.isArray(messages) ? messages.join(' ') : messages}</li>`);
+                    }
+                  }
+                });
+                
+                // Scroll to first error
+                if ($('.is-invalid').length > 0) {
+                  $('html, body').animate({
+                    scrollTop: $('.is-invalid').first().offset().top - 100
+                  }, 500);
+                } else if ($('#form-errors').is(':visible')) {
+                  $('html, body').animate({
+                    scrollTop: $('#form-errors').offset().top - 20
+                  }, 500);
+                }
+              } else {
+                // Handle non-field specific errors
+                showErrorModal(errorData.message || 'An error occurred while processing your request.');
+              }
+            } else {
+              // Handle other HTTP errors
+              showErrorModal(errorData.message || `Error ${xhr.status}: ${xhr.statusText}`);
+            }
+          } catch (e) {
+            console.error('Error processing error response:', e);
+            showErrorModal('An unexpected error occurred. Please try again.');
+          }
+        },
+        complete: function() {
+          $submitBtn.prop('disabled', false).html(originalText);
+        }
+      });
+    });
+  </script>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="patientIdModal" tabindex="-1" role="dialog" aria-labelledby="patientIdModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="patientIdModalLabel">Success</h5>
+          <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body text-center">
+          <i class="fas fa-check-circle text-success mb-3" style="font-size: 4rem;"></i>
+          <p class="lead"></p>
+          <p class="text-muted">You will be redirected shortly...</p>
         </div>
       </div>
-
-      <!-- Sidebar Menu -->
-      <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-          <li class="nav-item">
-            <a href="{% url 'patients:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-              <i class="nav-icon fas fa-tachometer-alt"></i>
-              <p>Dashboard</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{% url 'patients:patient_list' %}" class="nav-link {% if 'patient' in request.resolver_match.url_name %}{% if 'session' not in request.resolver_match.url_name %}active{% endif %}{% endif %}">
-              <i class="nav-icon fas fa-users"></i>
-              <p>Patients</p>
-            </a>
-          </li>
-          {% if user.is_staff %}
-          <li class="nav-item">
-            <a href="/admin/" class="nav-link" target="_blank">
-              <i class="nav-icon fas fa-cog"></i>
-              <p>Admin</p>
-            </a>
-          </li>
-          {% endif %}
-        </ul>
-      </nav>
-      <!-- /.sidebar-menu -->
     </div>
-    <!-- /.sidebar -->
-  </aside>
-
-  <!-- Content Wrapper. Contains page content -->
-  <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-      <div class="container-fluid">
-        <div class="row mb-2">
-          <div class="col-sm-6">
-            <h1 class="m-0">{% block page_title %}{% endblock %}</h1>
-          </div><!-- /.col -->
-          <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-              <li class="breadcrumb-item"><a href="{% url 'patients:dashboard' %}">Home</a></li>
-              {% block breadcrumb %}{% endblock %}
-            </ol>
-          </div><!-- /.col -->
-        </div><!-- /.row -->
-      </div><!-- /.container-fluid -->
-    </div>
-    <!-- /.content-header -->
-
-    <!-- Main content -->
-    <section class="content">
-      <div class="container-fluid">
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-          {% endfor %}
-        {% endif %}
-        
-        {% block content %}
-        {% endblock %}
-      </div><!-- /.container-fluid -->
-    </section>
-    <!-- /.content -->
   </div>
-  <!-- /.content-wrapper -->
 
-  <!-- Main Footer -->
-  <footer class="main-footer">
-    <div class="float-right d-none d-sm-block">
-      <b>Version</b> 1.0.0
+  <!-- Error Modal -->
+  <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="errorModalLabel">Error</h5>
+          <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <i class="fas fa-exclamation-circle text-danger" style="font-size: 4rem;"></i>
+          </div>
+          <div id="errorMessage" class="text-center"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
-    <strong>Copyright &copy; {% now "Y" %} Patient Data Management System.</strong> All rights reserved.
-  </footer>
-</div>
-<!-- ./wrapper -->
+  </div>
 
-<!-- REQUIRED SCRIPTS -->
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Bootstrap 4 -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-<!-- AdminLTE App -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/js/adminlte.min.js"></script>
-<!-- Custom scripts -->
-<script>
-  // Enable tooltips
-  $(function () {
-    $('[data-toggle="tooltip"]').tooltip()
-  });
-  
-  // Auto-hide alerts after 5 seconds
-  $(document).ready(function(){
-    setTimeout(function() {
-      $(".alert").fadeOut(1000, function(){
-        $(this).remove();
-      });
-    }, 5000);
-  });
-</script>
-{% block extra_js %}{% endblock %}
+  <script>
+  // Function to show error modal
+  function showErrorModal(message) {
+    $('#errorMessage').html(message);
+    $('#errorModal').modal('show');
+  }
+
+  // Function to show success modal
+  function showSuccessModal(message, redirectUrl) {
+    $('#patientIdModal .modal-body .lead').html(message);
+    $('#patientIdModal').modal('show');
+    
+    if (redirectUrl) {
+      setTimeout(function() {
+        window.location.href = redirectUrl;
+      }, 3000);
+    }
+  }
+  </script>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

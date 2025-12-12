@@ -11,28 +11,40 @@ class PatientForm(forms.ModelForm):
     
     class Meta:
         model = Patient
-        fields = ['patient_id', 'name', 'date_of_birth', 'age', 'gender', 'phone_number', 'email', 'address', 'clinical_notes']
+        fields = ['name', 'date_of_birth', 'age', 'gender', 'phone_number', 'email', 'address', 'clinical_notes']
         widgets = {
-            'patient_id': TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter patient ID'}),
             'name': TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter full name'}),
             'age': NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '150'}),
             'gender': Select(attrs={'class': 'form-control'}),
             'phone_number': TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. +1234567890'}),
             'email': EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@email.com'}),
             'address': Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Enter full address'}),
-            'clinical_notes': Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Enter any clinical notes'}),
+            'clinical_notes': Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 6, 
+                'placeholder': 'Enter medical history, symptoms, diagnoses, and treatment plans',
+                'style': 'min-height: 180px;'
+            })
         }
         help_texts = {
-            'patient_id': 'Unique identifier for the patient',
-            'email': 'A valid email address',
-            'phone_number': 'Include country code if applicable',
+            'patient_id': 'Unique identifier for the patient (auto-generated)',
+            'email': 'A valid email address for communication',
+            'phone_number': 'Include country code if applicable (e.g., +1 for US)',
+            'clinical_notes': 'Medical history, observations, and treatment details'
         }
 
-    def clean_patient_id(self):
-        patient_id = self.cleaned_data.get('patient_id')
-        if not patient_id:
-            raise forms.ValidationError("Patient ID is required")
-        return patient_id
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Only generate a new patient ID for new instances
+        if not instance.patient_id:
+            instance.patient_id = generate_patient_id()
+            
+        if commit:
+            instance.save()
+            self.save_m2m()
+            
+        return instance
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data.get('phone_number')
