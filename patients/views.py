@@ -27,6 +27,30 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+def send_patient_email_async(patient, created_by):
+    """Helper function to send email in a separate thread"""
+    try:
+        subject = f"New Patient Registration: {patient.name}"
+        html_message = render_to_string('patients/email/patient_created.html', {
+            'patient': patient,
+            'created_by': created_by,
+        })
+        plain_message = strip_tags(html_message)
+        
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[patient.email],
+            html_message=html_message,
+            fail_silently=True,  # Don't raise exceptions for email failures
+        )
+    except Exception as e:
+        # Log the error but don't show to user
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send patient email: {str(e)}")
+
 @login_required
 def patient_create(request):
     if request.method == 'POST':
@@ -38,35 +62,17 @@ def patient_create(request):
             success_message = f"Patient created successfully! Patient ID: {patient.patient_id}"
             messages.success(request, success_message)
             
-            # Send email if email is provided
+            # Send email in background thread if email is provided
             if patient.email:
                 try:
-                    subject = f"New Patient Registration: {patient.name}"
-                    html_message = render_to_string('patients/email/patient_created.html', {
-                        'patient': patient,
-                        'created_by': request.user.get_full_name() or request.user.username,
-                    })
-                    plain_message = strip_tags(html_message)
-                    
-                    try:
-                        send_mail(
-                            subject=subject,
-                            message=plain_message,
-                            from_email=settings.DEFAULT_FROM_EMAIL,
-                            recipient_list=[patient.email],
-                            html_message=html_message,
-                            fail_silently=False,
-                        )
-                        messages.info(request, f"Patient ID and details have been sent to {patient.email}")
-                    except Exception as e:
-                        # Log the error but don't show it to the user
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.error(f"Failed to send email to {patient.email}: {str(e)}")
-                        # Don't show email error to user as it's not critical
-                        pass
+                    # Start a new thread to send the email
+                    email_thread = Thread(
+                        target=send_patient_email_async,
+                        args=(patient, request.user.get_full_name() or request.user.username)
+                    )
+                    email_thread.daemon = True  # Thread will close when main program exits
+                    email_thread.start()
                 except Exception as e:
-                    # Log any other email-related errors
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.error(f"Error preparing email: {str(e)}")
