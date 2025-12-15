@@ -99,15 +99,15 @@ class Patient(models.Model):
         super().save(*args, **kwargs)
 
 class MeasurementSession(models.Model):
-    session_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    session_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='sessions', null=True, blank=True)
     initiated_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    device_id = models.CharField(max_length=128, blank=True)
+    device_id = models.CharField(max_length=128, default='001')
     completed = models.BooleanField(default=False)
 
     def __str__(self):
-        return str(self.session_id)
+        return f"Session {self.id} - Device: {self.device_id} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
 
 class SpectralPoint(models.Model):
     session = models.ForeignKey(MeasurementSession, on_delete=models.CASCADE, related_name='spectra')

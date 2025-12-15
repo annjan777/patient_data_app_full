@@ -95,17 +95,58 @@ def patient_create(request):
     
     return render(request, 'patients/patient_form.html', {'form': form})
 
+from django.db import transaction
+from django.contrib import messages
+
 @login_required
 def patient_detail(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
-    if request.method=='POST' and 'start_measurement' in request.POST:
-        # create session
-        session = MeasurementSession.objects.create(patient=patient, initiated_by=request.user)
-        # publish strict JSON payload
-        payload = json.dumps({'timestamp': str(session.created_at), 'session_id': str(session.session_id), 'patient_id': patient.patient_id})
-        publish.single(settings.MQTT['CONTROL_TOPIC'], payload=payload, hostname=settings.MQTT['BROKER'], port=settings.MQTT['PORT'])
-        return redirect('patients:patient_detail', pk=pk)
-    return render(request,'patients/patient_detail.html',{'patient':patient})
+    
+    if request.method == 'POST' and 'start_measurement' in request.POST:
+        try:
+            with transaction.atomic():
+                # Create a new session with the patient and device info
+                session = MeasurementSession.objects.create(
+                    patient=patient,
+                    device_id='001',  # Default device ID
+                    initiated_by=request.user
+                )
+                
+                # Publish control message with device_id
+                payload = {
+                    'timestamp': session.created_at.isoformat(),
+                    'device_id': '001',  # Default device ID
+                    'patient_id': str(patient.patient_id),
+                    'session_id': str(session.id)  # Include the database ID for reference
+                }
+                
+                try:
+                    publish.single(
+                        settings.MQTT['CONTROL_TOPIC'],
+                        payload=json.dumps(payload),
+                        hostname=settings.MQTT['BROKER'],
+                        port=settings.MQTT['PORT'],
+                        qos=1,  # At least once delivery
+                        retain=False
+                    )
+                    messages.success(request, f"Measurement session started for device 001")
+                except Exception as e:
+                    # If MQTT publish fails, we'll still have the session in the database
+                    messages.warning(request, f"Session created but could not send MQTT message: {str(e)}")
+                
+                return redirect('patients:patient_detail', pk=pk)
+                
+        except Exception as e:
+            messages.error(request, f"Error starting measurement: {str(e)}")
+            return redirect('patients:patient_detail', pk=pk)
+    
+    # Get recent sessions for this patient
+    recent_sessions = MeasurementSession.objects.filter(patient=patient).order_by('-created_at')[:5]
+    
+    return render(request, 'patients/patient_detail.html', {
+        'patient': patient,
+        'recent_sessions': recent_sessions
+    })
 
 @login_required
 def patient_update(request, pk):

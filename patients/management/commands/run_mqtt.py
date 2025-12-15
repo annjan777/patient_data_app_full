@@ -22,33 +22,72 @@ class Command(BaseCommand):
             try:
                 payload = msg.payload.decode()
                 data = json.loads(payload)
-                sid = data.get('session_id')
-                device = data.get('device_id')
-                spectra = data.get('spectra', [])
-                # Basic validation
-                if not sid or not isinstance(spectra, list):
-                    self.stderr.write('Invalid payload: missing session_id or spectra not a list')
-                    return
-                session = MeasurementSession.objects.filter(session_id=sid).first()
-                if not session:
-                    # attempt to link patient by patient_id if provided
-                    pid = data.get('patient_id')
-                    patient = None
-                    if pid:
-                        patient = Patient.objects.filter(patient_id=pid).first()
-                    session = MeasurementSession.objects.create(patient=patient, device_id=device or 'unknown')
-                for sp in spectra:
-                    try:
-                        w = float(sp.get('wavelength'))
-                        i = float(sp.get('intensity'))
-                        SpectralPoint.objects.create(session=session, wavelength=w, intensity=i)
-                    except Exception as e:
-                        self.stderr.write(f'Bad spectral point: {sp} -> {e}')
-                session.completed = True
-                if device:
-                    session.device_id = device
-                session.save()
-                self.stdout.write(self.style.SUCCESS(f'Ingested data for session {session.session_id} (points: {len(spectra)})'))
+                device_id = data.get('device_id', '001')  # Default to '001' if not provided
+                
+                # Check if this is a control message or data message
+                if 'spectra' in data:
+                    # This is a data message with spectral data
+                    spectra = data.get('spectra', [])
+                    
+                    # Basic validation
+                    if not isinstance(spectra, list):
+                        self.stderr.write('Invalid payload: spectra must be a list')
+                        return
+                    
+                    # Get or create a session for this device
+                    session = None
+                    session_id = data.get('session_id')
+                    
+                    if session_id:
+                        # Try to find existing session by ID
+                        try:
+                            session = MeasurementSession.objects.get(pk=session_id)
+                        except (ValueError, MeasurementSession.DoesNotExist):
+                            self.stderr.write(f'Session {session_id} not found, creating new session')
+                    
+                    if not session:
+                        # Create a new session if no valid session_id provided or found
+                        patient = None
+                        pid = data.get('patient_id')
+                        if pid:
+                            patient = Patient.objects.filter(patient_id=pid).first()
+                        
+                        session = MeasurementSession.objects.create(
+                            patient=patient,
+                            device_id=device_id,
+                            initiated_by=None  # Can't determine user from MQTT
+                        )
+                    
+                    # Process spectral data
+                    for sp in spectra:
+                        try:
+                            w = float(sp.get('wavelength'))
+                            i = float(sp.get('intensity'))
+                            # Skip if values are not valid numbers
+                            if not (isinstance(w, (int, float)) and isinstance(i, (int, float))):
+                                continue
+                            SpectralPoint.objects.create(session=session, wavelength=w, intensity=i)
+                        except (TypeError, ValueError) as e:
+                            self.stderr.write(f'Bad spectral point: {sp} -> {e}')
+                    
+                    session.completed = True
+                    session.save()
+                    self.stdout.write(self.style.SUCCESS(
+                        f'Ingested {len(spectra)} data points for device {device_id} (session: {session.id})'
+                    ))
+                
+                elif 'command' in data:
+                    # Handle control messages if needed
+                    command = data.get('command')
+                    self.stdout.write(f'Received command: {command} from device {device_id}')
+                
+                else:
+                    self.stderr.write(f'Unknown message format: {data}')
+                    
+            except json.JSONDecodeError:
+                self.stderr.write(f'Failed to decode JSON: {msg.payload}')
+            except Exception as e:
+                self.stderr.write(f'Error processing message: {str(e)}')
             except Exception as e:
                 self.stderr.write(f'Error parsing message: {e}')
 
