@@ -1,6 +1,24 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ patient.name }} - Patient Details{% endblock %}
+
+{% block extra_css %}
+<style>
+.status-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+.status-badge i {
+    margin-right: 4px;
+}
+</style>
+{% endblock %}
 
 {% block page_title %}
   {{ patient.name }}
@@ -15,6 +33,76 @@
 {% block breadcrumb %}
   <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}">Patients</a></li>
   <li class="breadcrumb-item active">{{ patient.name }}</li>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/reconnecting-websocket.js' %}"></script>
+<script>
+// WebSocket for real-time updates
+function updateSessionStatus(sessionId, status) {
+    const badge = $(`.session-status[data-session-id='${sessionId}']`);
+    if (badge.length) {
+        // Update badge classes
+        badge.removeClass('bg-success bg-warning bg-danger');
+        
+        if (status === 'completed') {
+            badge.addClass('bg-success');
+            badge.find('i').removeClass().addClass('fas fa-check-circle');
+        } else if (status === 'failed') {
+            badge.addClass('bg-danger');
+            badge.find('i').removeClass().addClass('fas fa-times-circle');
+        } else {
+            badge.addClass('bg-warning');
+            badge.find('i').removeClass().addClass('fas fa-hourglass-half');
+        }
+        
+        // Update status text
+        const statusText = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+        badge.contents().filter(function() {
+            return this.nodeType === 3; // Text nodes
+        }).first().replaceWith(statusText);
+    }
+}
+
+// Set up WebSocket connection
+const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const wsPath = `${wsScheme}://${window.location.host}/ws/patient/{{ patient.id }}/`;
+const socket = new ReconnectingWebSocket(wsPath);
+
+socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.type === 'status_update') {
+        updateSessionStatus(data.session_id, data.status);
+    }
+};
+
+// Request status updates for all sessions on the page
+$(document).ready(function() {
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+        $(".alert").fadeOut(1000, function(){
+            $(this).remove();
+        });
+    }, 5000);
+
+    // Get all session IDs for WebSocket subscription
+    const sessionIds = [];
+    $('.session-status').each(function() {
+        sessionIds.push($(this).data('session-id'));
+    });
+    
+    if (sessionIds.length > 0) {
+        // Request initial status updates
+        socket.send(JSON.stringify({
+            'type': 'subscribe',
+            'session_ids': sessionIds
+        }));
+    }
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -62,10 +150,26 @@
 
         <form method="post" class="text-center">
           {% csrf_token %}
-          <button name="start_measurement" class="btn btn-success btn-lg">
+          <div class="form-group">
+            <select name="device_id" class="form-control mb-2" required>
+              <option value="">-- Select a device --</option>
+              {% for device in active_devices %}
+                <option value="{{ device.id }}">
+                  {{ device.name }} ({{ device.device_id }}) - {{ device.is_active|yesno:"Active,Inactive" }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" name="start_measurement" class="btn btn-success btn-lg">
             <i class="fas fa-play-circle"></i> Start New Measurement
           </button>
         </form>
+        {% if not active_devices %}
+          <div class="alert alert-warning mt-2">
+            <i class="fas fa-exclamation-triangle"></i>
+            No active devices found. Please contact an administrator to add or activate devices.
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -88,6 +192,7 @@
             <thead>
               <tr>
                 <th>Session ID</th>
+                <th>Device</th>
                 <th>Date</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -96,14 +201,20 @@
             <tbody>
               {% for session in patient.sessions.all %}
               <tr>
-                <td>{{ session.session_id|truncatechars:15 }}</td>
+                <td>{{ session.session_id|truncatechars:12 }}</td>
+                <td>
+                  {% if session.device %}
+                    {{ session.device.name }} ({{ session.device.device_id }})
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
                 <td>{{ session.created_at|date:"M d, Y H:i" }}</td>
                 <td>
-                  {% if session.completed %}
-                    <span class="badge bg-success">Completed</span>
-                  {% else %}
-                    <span class="badge bg-warning">In Progress</span>
-                  {% endif %}
+                  <span class="status-badge bg-{% if session.status == 'completed' %}success{% elif session.status == 'failed' %}danger{% else %}warning{% endif %} session-status" data-session-id="{{ session.session_id }}">
+                    <i class="fas fa-{% if session.status == 'completed' %}check-circle{% elif session.status == 'failed' %}times-circle{% else %}hourglass-half{% endif %}"></i>
+                    {{ session.get_status_display }}
+                  </span>
                 </td>
                 <td>
                   <a href="{% url 'patients:session_detail' session.session_id %}" class="btn btn-info btn-sm" title="View Details">
@@ -185,18 +296,3 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-  $(document).ready(function() {
-    // Initialize tooltips
-    $('[data-toggle="tooltip"]').tooltip();
-    
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function() {
-      $(".alert").fadeOut(1000, function(){
-        $(this).remove();
-      });
-    }, 5000);
-  });
-</script>
-{% endblock %}

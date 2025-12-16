@@ -6,15 +6,37 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    'django.contrib.admin','django.contrib.auth','django.contrib.contenttypes',
-    'django.contrib.sessions','django.contrib.messages','django.contrib.staticfiles',
-    'patients','crispy_forms',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'channels',
+    'patients',
+    'crispy_forms',
 ]
 
+# Channels
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channel layer settings
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware','django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware','django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware','django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -54,10 +76,12 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-# MQTT config (edit as needed)
+# MQTT Configuration
 MQTT = {
-    'BROKER': os.environ.get('MQTT_BROKER','localhost'),
+    'BROKER': os.environ.get('MQTT_BROKER', 'localhost'),
     'PORT': int(os.environ.get('MQTT_PORT', '1883')),
-    'CONTROL_TOPIC': os.environ.get('MQTT_CONTROL_TOPIC','device/control/start'),
-    'DATA_TOPIC': os.environ.get('MQTT_DATA_TOPIC','device/data/result'),
+    # Subscribe to all device measurement topics
+    'DATA_TOPIC': '+/+/measurements',  # Format: {device_id}/{session_id}/measurements
+    # Control topic for sending commands to devices
+    'CONTROL_TOPIC_PREFIX': 'device/',  # Format: device/{device_id}/control
 }

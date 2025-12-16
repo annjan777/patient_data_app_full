@@ -1,6 +1,27 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 import uuid
+
+User = get_user_model()
+
+class Device(models.Model):
+    device_id = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.device_id})"
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    device = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True, blank=True)
+    is_admin = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username}'s profile"
 
 def generate_patient_id():
     """Generate a new patient ID in the format PID000001"""
@@ -35,6 +56,7 @@ class Patient(models.Model):
         default=generate_patient_id,
         editable=False
     )
+    device = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True, blank=True, related_name='patients')
     name = models.CharField(
         max_length=200,
         help_text='Full name of the patient'
@@ -99,15 +121,29 @@ class Patient(models.Model):
         super().save(*args, **kwargs)
 
 class MeasurementSession(models.Model):
+    STATUS_CHOICES = [
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    
     session_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='sessions', null=True, blank=True)
+    device = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
     initiated_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    device_id = models.CharField(max_length=128, default='001')
-    completed = models.BooleanField(default=False)
-
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
     def __str__(self):
-        return f"Session {self.id} - Device: {self.device_id} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+        return f"Session {self.session_id} - {self.get_status_display()} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+        
+    def save(self, *args, **kwargs):
+        # Update the updated_at timestamp whenever the record is saved
+        self.updated_at = timezone.now()
+        super().save(*args, **kwargs)
 
 class SpectralPoint(models.Model):
     session = models.ForeignKey(MeasurementSession, on_delete=models.CASCADE, related_name='spectra')

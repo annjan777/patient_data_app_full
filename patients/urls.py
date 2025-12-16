@@ -13,4 +13,5 @@ urlpatterns = [
     path('sessions/<uuid:session_id>/', views.session_detail, name='session_detail'),
     path('sessions/<uuid:session_id>/export/csv/', views.export_csv, name='export_csv'),
     path('sessions/<uuid:session_id>/export/xlsx/', views.export_xlsx, name='export_xlsx'),
+    path('sessions/<uuid:session_id>/data/', views.session_data, name='session_data'),
 ]

@@ -8,8 +8,11 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(MeasurementSession)
 class SessionAdmin(admin.ModelAdmin):
-    list_display = ('session_id','patient','initiated_by','created_at','completed')
-    list_filter = ('completed','created_at')
+    list_display = ('session_id', 'patient', 'initiated_by', 'created_at', 'status', 'device')
+    list_filter = ('status', 'created_at', 'device')
+    readonly_fields = ('created_at', 'updated_at')
+    search_fields = ('session_id', 'patient__name', 'device__name', 'device__device_id')
+    list_select_related = ('patient', 'initiated_by', 'device')
 
 @admin.register(SpectralPoint)
 class SpectralAdmin(admin.ModelAdmin):

@@ -1,6 +1,24 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Dashboard - Patient Data Management{% endblock %}
+
+{% block extra_css %}
+<style>
+.status-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+.status-badge i {
+    margin-right: 4px;
+}
+</style>
+{% endblock %}
 
 {% block page_title %}
   Dashboard
@@ -9,6 +27,77 @@
 
 {% block breadcrumb %}
   <li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/reconnecting-websocket.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Enable tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+        $(".alert").fadeOut(1000, function(){
+            $(this).remove();
+        });
+    }, 5000);
+
+    // WebSocket for real-time updates
+    function updateSessionStatus(sessionId, status) {
+        const badge = $(`.session-status[data-session-id='${sessionId}']`);
+        if (badge.length) {
+            // Update badge classes
+            badge.removeClass('bg-success bg-warning bg-danger');
+            
+            if (status === 'completed') {
+                badge.addClass('bg-success');
+                badge.find('i').removeClass().addClass('fas fa-check-circle');
+            } else if (status === 'failed') {
+                badge.addClass('bg-danger');
+                badge.find('i').removeClass().addClass('fas fa-times-circle');
+            } else {
+                badge.addClass('bg-warning');
+                badge.find('i').removeClass().addClass('fas fa-hourglass-half');
+            }
+            
+            // Update status text
+            const statusText = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+            badge.contents().filter(function() {
+                return this.nodeType === 3; // Text nodes
+            }).first().replaceWith(statusText);
+        }
+    }
+
+    // Set up WebSocket connection
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsPath = `${wsScheme}://${window.location.host}/ws/dashboard/`;
+    const socket = new ReconnectingWebSocket(wsPath);
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'status_update') {
+            updateSessionStatus(data.session_id, data.status);
+        }
+    };
+
+    // Request status updates for all sessions on the page
+    const sessionIds = [];
+    $('.session-status').each(function() {
+        sessionIds.push($(this).data('session-id'));
+    });
+    
+    if (sessionIds.length > 0) {
+        // Request initial status updates
+        socket.send(JSON.stringify({
+            'type': 'subscribe',
+            'session_ids': sessionIds
+        }));
+    }
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -91,11 +180,10 @@
                     </a>
                   </td>
                   <td>
-                    {% if session.completed %}
-                      <span class="badge bg-success">Completed</span>
-                    {% else %}
-                      <span class="badge bg-warning">In Progress</span>
-                    {% endif %}
+                    <span class="status-badge bg-{% if session.status == 'completed' %}success{% elif session.status == 'failed' %}danger{% else %}warning{% endif %} session-status" data-session-id="{{ session.session_id }}">
+                      <i class="fas fa-{% if session.status == 'completed' %}check-circle{% elif session.status == 'failed' %}times-circle{% else %}hourglass-half{% endif %}"></i>
+                      {{ session.get_status_display }}
+                    </span>
                   </td>
                   <td>{{ session.created_at|date:"M d, Y H:i" }}</td>
                   <td>
@@ -228,49 +316,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<!-- ChartJS -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  $(document).ready(function() {
-    // Enable tooltips
-    $('[data-toggle="tooltip"]').tooltip();
-    
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function() {
-      $(".alert").fadeOut(1000, function(){
-        $(this).remove();
-      });
-    }, 5000);
-    
-    // Initialize any charts here if needed
-    // Example:
-    /*
-    var ctx = document.getElementById('patientChart').getContext('2d');
-    var myChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-          label: 'New Patients',
-          data: [12, 19, 3, 5, 2, 3],
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-    */
-  });
-</script>
 {% endblock %}
