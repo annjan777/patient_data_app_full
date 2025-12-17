@@ -106,17 +106,22 @@ class DeviceForm(forms.ModelForm):
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['device', 'is_admin']
+        fields = ['role', 'devices', 'is_admin', 'phone', 'department']
         widgets = {
-            'device': Select(attrs={'class': 'form-select'}),
-            'is_admin': CheckboxInput(attrs={'class': 'form-check-input'})
+            'role': forms.Select(attrs={'class': 'form-select'}),
+            'devices': forms.SelectMultiple(attrs={'class': 'form-select'}),
+            'is_admin': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'department': forms.TextInput(attrs={'class': 'form-control'})
         }
         help_texts = {
-            'device': 'Select the device assigned to this user',
-            'is_admin': 'Check to grant admin privileges to this user'
+            'role': 'Select the role for this user',
+            'devices': 'Select devices this user can access (hold Ctrl/Cmd to select multiple)',
+            'is_admin': 'Check to grant admin privileges to this user',
+            'phone': 'Contact number for this user',
+            'department': 'Department or specialty of this user'
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only show active devices in the dropdown
-        self.fields['device'].queryset = Device.objects.filter(is_active=True)
+        # Additional initialization can go here if needed

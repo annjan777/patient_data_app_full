@@ -6,22 +6,70 @@ import uuid
 User = get_user_model()
 
 class Device(models.Model):
-    device_id = models.CharField(max_length=50, unique=True)
-    name = models.CharField(max_length=100)
-    is_active = models.BooleanField(default=True)
+    DEVICE_TYPES = [
+        ('spectrometer', 'Spectrometer'),
+        ('sensor', 'Sensor'),
+        ('other', 'Other'),
+    ]
+    
+    device_id = models.CharField(max_length=50, unique=True, help_text='Unique identifier for the device')
+    name = models.CharField(max_length=100, help_text='Display name for the device')
+    device_type = models.CharField(max_length=20, choices=DEVICE_TYPES, default='spectrometer')
+    is_active = models.BooleanField(default=True, help_text='Whether the device is active and available for use')
+    description = models.TextField(blank=True, help_text='Device description and specifications')
+    location = models.CharField(max_length=100, blank=True, help_text='Physical location of the device')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Device'
+        verbose_name_plural = 'Devices'
+
     def __str__(self):
         return f"{self.name} ({self.device_id})"
+        
+    def get_active_sessions(self):
+        """Return active measurement sessions for this device"""
+        return self.sessions.filter(status='in_progress')
+        
+    def get_recent_sessions(self, days=7):
+        """Return recent sessions for this device"""
+        from django.utils import timezone
+        from datetime import timedelta
+        return self.sessions.filter(
+            created_at__gte=timezone.now() - timedelta(days=days)
+        ).order_by('-created_at')
 
 class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('admin', 'Administrator'),
+        ('doctor', 'Doctor'),
+        ('technician', 'Lab Technician'),
+        ('staff', 'Staff'),
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    device = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True, blank=True)
-    is_admin = models.BooleanField(default=False)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
+    devices = models.ManyToManyField(Device, blank=True, related_name='assigned_users', 
+                                   help_text='Devices this user has access to')
+    is_admin = models.BooleanField(default=False, help_text='User has admin privileges')
+    phone = models.CharField(max_length=20, blank=True, help_text='Contact number')
+    department = models.CharField(max_length=100, blank=True, help_text='Department or specialty')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+        ordering = ['user__username']
 
     def __str__(self):
-        return f"{self.user.username}'s profile"
+        return f"{self.user.get_full_name() or self.user.username} ({self.get_role_display()})"
+        
+    def has_device_access(self, device):
+        """Check if user has access to a specific device"""
+        return self.is_admin or self.devices.filter(pk=device.pk).exists()
 
 def generate_patient_id():
     """Generate a new patient ID in the format PID000001"""
@@ -149,6 +197,7 @@ class SpectralPoint(models.Model):
     session = models.ForeignKey(MeasurementSession, on_delete=models.CASCADE, related_name='spectra')
     wavelength = models.FloatField()
     intensity = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['wavelength']
